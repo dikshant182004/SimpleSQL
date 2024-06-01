@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag and Drop</title>
+    <style>
+        .container {
+            display: flex;
+            gap: 10px;
+        }
+        .draggable {
+            width: 100px;
+            height: 100px;
+            background-color: lightblue;
+            margin: 10px;
+            cursor: pointer;
+        }
+        .dropzone {
+            width: 200px;
+            height: 200px;
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dropzone" id="original-zone">
+            <div class="draggable" draggable="true" id="draggable">Drag me</div>
+        </div>
+        <div class="dropzone" id="dropzone">Drop here</div>
+    </div>
+    <script>
+        const draggable = document.getElementById('draggable');
+        const originalZone = document.getElementById('original-zone');
+        const dropzone = document.getElementById('dropzone');
+
+        draggable.addEventListener('dragstart', (event) => {
+            event.dataTransfer.setData('text', event.target.id);
+            setTimeout(() => {
+                event.target.style.visibility = 'hidden';
+            }, 0);
+        });
+
+        draggable.addEventListener('dragend', (event) => {
+            event.target.style.visibility = 'visible';
+        });
+
+        [originalZone, dropzone].forEach(zone => {
+            zone.addEventListener('dragover', (event) => {
+                event.preventDefault();
+            });
+
+            zone.addEventListener('drop', (event) => {
+                event.preventDefault();
+                const data = event.dataTransfer.getData('text');
+                const element = document.getElementById(data);
+                zone.appendChild(element);
+            });
+        });
+    </script>
+</body>
+</html>
