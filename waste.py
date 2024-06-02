@@ -105,7 +105,7 @@ def main():
                     st.write("Table Name   =  ",table_name)
                     if db_connector.import_csv_to_table(table_name,dataframe,session_name):
                         query = Sql_Queries(table_name)
-                        # query.choose_the_datasets()
+                        query.choose_the_datasets()
 
 
 if __name__ == "__main__":   
