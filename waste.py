@@ -46,31 +46,50 @@ class DatabaseConnector:
             engine = create_engine(f'mysql+mysqlconnector://{self.user}:{self.password}@{self.host}/{session_name}')
             dataframe.to_sql(table_name,engine, if_exists='replace', index=False)
 
-            st.success(f"Dataset imported with table name ='{table_name}' successfully!!!")
+            st.success(f"All the dataset are imported successfully!!!")
             return True
 
         except mysql.connector.Error as e:
             st.error(f"Error importing dataset: {e}")
             return False
 
-class Sql_Queries:
-    def __init__(self,datasets):
+class Sql_Queries(DatabaseConnector):
+    def __init__(self,host, user, password,datasets,database_name):
+        super().__init__(host, user, password)
         self.datasets=datasets
-        self.dataset_names=[]
-        self.dataset_names.append(self.datasets)
+        self.database_name=database_name
+        
 
     def choose_the_datasets(self):
         try:
             
             # Multi-select widget for selecting datasets
-            selected_datasets = st.multiselect("Select Datasets:", self.dataset_names)
+            selected_datasets = st.multiselect("Select Datasets :", self.datasets)
 
             # Display selected datasets with numbering 
-            st.write("Selected Datasets:")
+            st.write("Selected Datasets to run SQL Queries are :-")
             for i, dataset in enumerate(selected_datasets, start=1):
                 st.write(f"{i}. {dataset}")
-        except:
-            pass
+        except Exception as e :
+            st.error(f"Error: {e}")
+
+    def drop_table(self, table_name):
+        try:
+            connection = mysql.connector.connect(
+                host=self.host,
+                user=self.user,
+                password=self.password,
+                database=self.database_name,
+                auth_plugin='mysql_native_password'
+            )
+            cursor = connection.cursor()
+            cursor.execute(f"DROP TABLE IF EXISTS `{table_name}`")
+            connection.commit()
+            cursor.close()
+            connection.close()
+            st.success(f"Table '{table_name}' dropped successfully!")
+        except mysql.connector.Error as e:
+            st.error(f"Error dropping table: {e}")
 
 def main():
     st.markdown('<h3 style="text-align:center; font-size: 50px; font-weight: bold;">Data Playground 📊</h3>',
@@ -82,6 +101,7 @@ def main():
         db_host = st.text_input("Enter MySQL Hostname:",help="The MySQL hostname is the address of the MySQL server that your application needs to connect to in order to access the database. If your MySQL server is running on the same machine as your application, the hostname is usually localhost")
         db_user = st.text_input("Enter MySQL Username:",help="The MySQL username is the account name used to log in to the MySQL database.For example =(root)")
         db_password = st.text_input("Enter MySQL Password:", type="password",help="password to access the database.")
+        datasets_name=[]
 
         if db_host and db_user and db_password:
             db_connector = DatabaseConnector(db_host, db_user, db_password)
@@ -98,14 +118,31 @@ def main():
             uploaded_files = st.file_uploader("Upload CSV Datasets:", accept_multiple_files=True, type=['csv'])
             if uploaded_files:
                 st.subheader("Uploaded Data:")
+                tag_index=0
                 for uploaded_file in uploaded_files:
                     dataframe = pd.read_csv(uploaded_file)
-                    st.write(dataframe)
                     table_name = uploaded_file.name.split('.')[0]  # Use file name as table name
-                    st.write("Table Name   =  ",table_name)
-                    if db_connector.import_csv_to_table(table_name,dataframe,session_name):
-                        query = Sql_Queries(table_name)
-                        query.choose_the_datasets()
+                    datasets_name.append(table_name)
+                    with st.expander(f"Table Name: {table_name}"):
+                        st.write(dataframe)
+                        tag_index=tag_index+1
+                        agree = st.checkbox("Drop the table !!!",key=f"{tag_index}")
+
+                        if agree:
+                            remove=Sql_Queries(db_host, db_user, db_password,uploaded_file,session_name)
+                            remove.drop_table(table_name)
+                            datasets_name.remove(table_name)
+                            
+                    
+                query = Sql_Queries(db_host, db_user, db_password,datasets_name,session_name)
+
+                if db_connector.import_csv_to_table(table_name,dataframe,session_name):
+                    query.choose_the_datasets()
+
+
+
+
+
 
 
 if __name__ == "__main__":   
